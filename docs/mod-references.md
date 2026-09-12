@@ -21,12 +21,11 @@ C:\Program Files (x86)\Steam\steamapps\common\Project Spark\
    ├─ Src\
    │  ├─ Lua\*.lua               ← 未打包的游戏 Lua 源码（可直接读实现）
    │  ├─ Data\*.lua              ← 游戏 Preset 数据（TraitPreset、BuildingTemplate…）
-   │  ├─ CommonLua\*             ← 引擎公共 Lua（Modding/Mod.lua 等）
-   │  └─ LuaExportedDocs\Global\*.lua ← 引擎全局函数带注释声明（thread.lua…）
+   │  ├─ CommonLua\*             ← 引擎公共 Lua（CommonLua/Modding/Mod.lua、CommonLua/LuaExportedDocs/Global/*.lua…）
    └─ SolEngineLua.vsix          ← VS Code 调试扩展（可 attach 到游戏调试 Lua）
 ```
 
-### 官方文档清单（`ModTools\Docs\`，52 个文件）
+### 官方文档清单（`ModTools\Docs\`，55 个 HTML 文件）
 
 | 文档 | 内容 | 何时看 |
 | --- | --- | --- |
