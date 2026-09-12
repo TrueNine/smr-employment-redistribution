@@ -1,3 +1,5 @@
+<!-- BEGINE:AGENTS.md -->
+
 # AGENTS.md — Employment - Redistribution
 
 Surviving Mars: Relaunched（内部代号 Project Spark，Steam AppID 3215050）的本地 MOD。
@@ -53,3 +55,5 @@ Surviving Mars: Relaunched（内部代号 Project Spark，Steam AppID 3215050）
 - 把 `Unemployment_Redist_Sols` 调成 1，拆掉某有专长居民的岗位使其失业，1 个太阳日后其专长变为 "No specialization"
 - 对照组：儿童/老人/无专长者不受影响；重新就业后计数清零；阈值调大（30）时不触发
 - 游戏中按 `Enter` 可打开调试控制台（`MarsDebug.exe` 运行时），可输入任意 Lua 代码查状态
+
+<!-- END:AGENTS.md -->
