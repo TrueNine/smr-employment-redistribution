@@ -2,6 +2,8 @@
 
 # AGENTS.md — Employment - Redistribution
 
+> **开发/改代码前请先读 [`docs/mod-references.md`](docs/mod-references.md)**——已汇总全部官方文档路径、游戏源码位置、MOD 系统机制、常用 API 速查与踩坑记录，不用再盲目翻文档。
+
 Surviving Mars: Relaunched（内部代号 Project Spark，Steam AppID 3215050）的本地 MOD。
 功能：有专长的居民连续失业 N 个太阳日（选项，默认 3，可设 1-30）后，被退回「无专长」；儿童、老人、本身无专长者不受影响。
 
