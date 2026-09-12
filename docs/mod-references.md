@@ -13,9 +13,11 @@
 C:\Program Files (x86)\Steam\steamapps\common\Project Spark\
 ├─ Mars.exe / MarsDebug.exe        ← MarsDebug 按 Enter 可开调试控制台
 ├─ Packs\*.fpk                     ← 打包资产（Data/Lua/UI 等）
-├─ DLC\*.hpk                       ← DLC（norman=Feeding the Future, thomas=...）
+├─ DLC\norman.fpk, thomas.fpk      ← DLC 包（norman=Feeding the Future）
+├─ Local\                          ← 游戏本地数据（账号存储等）
 └─ ModTools\
    ├─ Docs\*.md.html              ← ★ 官方 MOD 开发文档（HTML）
+   ├─ Samples\                    ← 官方示例 MOD
    ├─ Src\
    │  ├─ Lua\*.lua               ← 未打包的游戏 Lua 源码（可直接读实现）
    │  ├─ Data\*.lua              ← 游戏 Preset 数据（TraitPreset、BuildingTemplate…）
