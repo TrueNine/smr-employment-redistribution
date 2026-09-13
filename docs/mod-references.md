@@ -1,231 +1,227 @@
-# MOD 开发参考手册 — Surviving Mars: Relaunched
+# MOD 开发参考资料（项目专用）
 
-> 本文件是 Employment - Redistribution 及后续 SURVIVING MARS: Relaunched MOD 开发的**唯一参考入口**。
-> 目标：以后改进本 MOD 或开发新 MOD，不需要再盲目翻游戏文档。
-> 所有信息来自随游戏发布的官方文档与未打包 Lua 源码（与游戏版本同步，权威来源）。
-
----
-
-## 1. 资源位置（都在本机，已验证存在）
-
-### 游戏安装目录
-```
-C:\Program Files (x86)\Steam\steamapps\common\Project Spark\
-├─ Mars.exe / MarsDebug.exe        ← MarsDebug 按 Enter 可开调试控制台
-├─ Packs\*.fpk                     ← 打包资产（Data/Lua/UI 等）
-├─ DLC\norman.fpk, thomas.fpk      ← DLC 包（norman=Feeding the Future）
-├─ Local\                          ← 游戏本地数据（账号存储等）
-└─ ModTools\
-   ├─ Docs\*.md.html              ← ★ 官方 MOD 开发文档（HTML）
-   ├─ Samples\                    ← 官方示例 MOD
-   ├─ Src\
-   │  ├─ Lua\*.lua               ← 未打包的游戏 Lua 源码（可直接读实现）
-   │  ├─ Data\*.lua              ← 游戏 Preset 数据（TraitPreset、BuildingTemplate…）
-   │  ├─ CommonLua\*             ← 引擎公共 Lua（CommonLua/Modding/Mod.lua、CommonLua/LuaExportedDocs/Global/*.lua…）
-   └─ SolEngineLua.vsix          ← VS Code 调试扩展（可 attach 到游戏调试 Lua）
-```
-
-### 官方文档清单（`ModTools\Docs\`，55 个 HTML 文件）
-
-| 文档 | 内容 | 何时看 |
-| --- | --- | --- |
-| `index.md.html` | 总览、MOD 存放路径、Mod Editor 用法、Lua 环境 | 入门 |
-| `LuaDoc_Msg.md.html` | 全部 OnMsg 事件表 | 挂事件 |
-| `Colonists.md.html` | 居民生命周期、年龄组、工作、状态、示例 | 居民类 MOD |
-| `ModItemTrait.md.html` | 特质系统（组、增删、过滤、DailyUpdate…） | 改特质 |
-| `ModItemOption.md.html` | 选项条目（toggle/number/choice）与 UI 行为 | 加选项 |
-| `ModItemCode.md.html` | Lua 沙箱全局变量（CurrentMod*）、持久数据、调试 | 写代码 |
-| `LuaDoc__G.md.html` | 引擎全局函数（线程、压缩、持久化、工具） | 调引擎 |
-| `LuaDoc_Gameplay.md.html` | 高层玩法函数（研究、资金、锁建筑/特质…） | 玩法改动 |
-| `LuaMarsMapsLabels.md.html` | labels 体系（city/dome/colony，Unemployed…） | 找对象集合 |
-| `LuaDoc_CObject.md.html` | CObject 方法（IsValid、位置、状态…） | 对象操作 |
-| `LuaDoc_SupplyGrid.md.html` / `LuaDoc_GridObject.md.html` / `LuaDoc_terrain.md.html` / `LuaDoc_hex.md.html` / `LuaDoc_point.md.html` / `LuaDoc_Selection.md.html` / `LuaDoc_camera*.md.html` | 网格/对象/地形/相机 | 高级 |
-| `ModItemBuildingTemplate.md.html` / `ModItemEntity.md.html` / `ModItemEffect.md.html` / `ModItemGameRule.md.html` / `ModItemTech*.md.html` / `ModItemCrop.md.html` / `ModItemSound.md.html` / `ModItemLocTable.md.html` / `ModItemTrait.md.html` / `ModItemAnimal.md.html` / `ModItemVegetation.md.html` / `ModItemCommanderProfile.md.html` 等 | 各 ModItem 类型的属性 | 加新 ModItem |
-| `LuaConditionDoc.md.html` / `LuaEffectDoc.md.html` / `ModItemStoryBit.md.html` | 条件/效果/剧情 | 做任务线 |
-| `Research.md.html` | 科技系统 | 科技类 |
-
-**读法**：这些是 markdeep 生成的 HTML，可用
-```powershell
-$h = Get-Content <file> -Raw; [regex]::Replace($h, '<[^>]+>', "`n")   # 去掉标签当纯文本读
-```
-
-### 未打包源码（可直接 Read 的文件，验证过）
-- `Src\Lua\Specialization.lua` — `const.ColonistSpecialization`、`ValidateSpecialization`、实体命名
-- `Src\Lua\Traits.lua` — 特质 UI/生成逻辑
-- `Src\Lua\Units\Colonist.lua` — 居民实现
-- `Src\Data\TraitPreset.lua` — 全部特质 Preset（含年龄组、专长组、OnApply 钩子）
-- `Src\CommonLua\Modding\Mod.lua` — MOD 加载/保存/选项机制（`ModsReloadDefs`、`HasModsWithOptions`、`ModOptionsObject`…）
-- `Src\CommonLua\LuaExportedDocs\Global\thread.lua` — 线程/时间 API 带注释
-- `Src\Lua\_GameConst.lua` — `const.DayDuration = const.Scale.sols`、`const.HourDuration = const.Scale.h`
-
-### 本地其他 MOD（可抄结构）
-```
-%AppData%\Surviving Mars Relaunched\Mods\WW Constant Meteor Storms\
-  ├─ items.lua / metadata.lua
-  └─ Code\Script.lua     ← 定时器 + 选项 + 灾害触发的完整范例（本 MOD 的模板来源）
-```
-
-### Steam 创意工坊 MOD（只读、需复制到 %AppData% 下才可加载）
-```
-C:\Program Files (x86)\Steam\steamapps\workshop\content\3215050\<steam_id>\
-```
-文档明确说：**游戏不会直接从这里加载本地修改**；要改用就复制进 `%AppData%\Surviving Mars Relaunched\Mods\`。
+> 本文件汇总本项目用到的全部外部参考与开发结论，改代码前查这里，不必再翻游戏文档。
+> 权威来源路径：
+> - 游戏文档：`C:\Program Files (x86)\Steam\steamapps\common\Project Spark\ModTools\Docs\`
+> - 游戏公开源码：`C:\Program Files (x86)\Steam\steamapps\common\Project Spark\ModTools\Src\`（`Lua/`、`CommonLua/`、`Data/`）
+> - 示例 MOD：`ModTools\Samples\Mods\`（不能直接加载，需复制到 `%AppData%\Surviving Mars Relaunched\Mods\`）
 
 ---
 
-## 2. MOD 系统核心机制（从 Mod.lua 源码提炼）
+## 1. 本 MOD 现状速查
 
-- **加载来源**：本地 `%AppData%\Surviving Mars Relaunched\Mods\`（source="appdata"）+ 创意工坊订阅。启动时 `ModsReloadDefs` 扫描；编辑器保存后触发 "Reloading" 重建。
-- **每个 MOD 目录 = metadata.lua（ModDef 序列化）+ items.lua（ModItem 序列化）+ 自由文件**。metadata/items 由编辑器生成重写；手写也可，但改完建议进编辑器保存一次以同步 hash。
-- **options 展示条件**（`OptionsContentWindow` 的 ForEach 条件）：
-  `IsKindOf(item.options, "ModOptionsObject") and next(item.options:GetProperties())`
-  → 即：该 MOD 的 **items 已加载**（勾选启用）且**至少有一个带 `name` 的 ModItemOption**。没启用就不会进 Options 的 "Mod Options" 页。
-- **选项值入口**：`CurrentModOptions.GetProperty(id)`；玩家点 Apply 后发 `OnMsg.ApplyModOptions(mod_id)`；MOD 热重载发 `OnMsg.ModsReloaded`。
-- **代码条目**：`ModItemCode{CodeFileName=...}` 相对 MOD 根目录；游戏 Lua 与全部 DLC Lua **保证先于** MOD 代码加载。
-- **持久数据（跨存档会话）**：`WriteModPersistentData` / `ReadModPersistentData`（每 MOD 独立、字符串、上限 `const.MaxModDataSize`）；`WriteModPersistentStorageTable` 可直接存 `CurrentModStorageTable`。⚠ 本 MOD 的失业计数没用它（内存级），如需跨读档保留可加。
-- **MapVars**：随地图存取的存档内变量；`OnMsg.NewMapLoaded` 后初始化，MOD 在编辑器载入时不会自动初始化表值型 MapVar（需重启测试地图）。
-- **版本字段**：`lua_revision`（开发时游戏版本）、`saved_with_revision`、`code_hash`、`steam_id`、`version` —— 编辑器保存时自动维护，**不要手改**。
-- **冲突规避**：OnMsg 名字、DefineClass 类名跨 MOD/游戏全局共享，自定义的都加唯一前缀（如 `OnMsg.MyMod_X`、`DefineClass.MyMod_Y`）。
-- **调试**：
-  - `MarsDebug.exe` 运行中按 `Enter` 开控制台可执行任意 Lua；`F9` 清屏。
-  - VS Code 装 `SolEngineLua.vsix`，打开 `ModTools\Src\ModTools.code-workspace`，F5 attach。
-  - 日志位置：`%AppData%\Surviving Mars Relaunched\logs\`（`[mod]` 前缀行看 MOD 加载/重载）。
-
----
-
-## 3. 常用 OnMsg 事件速查（本游戏实际支持的）
-
-| 事件 | 参数 | 用途 |
-| --- | --- | --- |
-| `NewDay(day)` | 太阳日号 | 每日 tick（本 MOD 主逻辑） |
-| `NewHour(hour)` | 小时号 | 每小时 tick（气象 MOD 用的） |
-| `NewGame` | — | 开新局，清状态 |
-| `PostLoadGame` / `LoadGame` / `PreLoadGame` | metadata, version | 读档前后，清状态 |
-| `ModsReloaded` | — | MOD 热重载后 |
-| `ApplyModOptions(mod_id)` | mod id | 玩家应用了 MOD 选项（注意判 `mod_id == CurrentModId`） |
-| `ModUnloadLua(mod_id)` | mod id | MOD 卸载前清理 |
-| `ColonistArrived(colonist)` / `ColonistBorn(colonist, event)` / `ColonistDied(c, reason)` / `ColonistLeavingMars(c, rocket)` | | 居民生命周期 |
-| `ColonistChangeWorkplace(colonist, new_wp, old_wp)` | | 换工作点（**未来做"失业检测"更精确的钩子**） |
-| `NewSpecialist(colonist)` | | 居民获得专长时（可用于"只统计有专长者"白名单） |
-| `RocketLanded(rocket)` / `RocketLaunched` / `RocketStatusUpdate` | | 火箭 |
-| `ConstructionComplete(building)` / `OnSetWorking(building, working)` | | 建筑事件 |
-| `MeteorStorm` / `MeteorStormEnded` | | 灾害 |
-| `Msg(name, ...)` | | 自定义事件（跨 MOD，记得加前缀） |
-
----
-
-## 4. 居民（Colonist）速查
-
-### 年龄组（特质，互斥，组 "Age Group"）
-| 特质 id | 说明 | 能工作 |
-| --- | --- | --- |
-| `Child` | 儿童，上学、进游乐场 | ✗ |
-| `Youth` | 青年，成年时按学校/游乐场表现生成随机特质 | ✓ |
-| `Adult` | 成年 | ✓ |
-| `Middle Aged` | 中年 | ✓ |
-| `Senior` | 老人（OnApply 时若 `g_SeniorsCanWork` 为假会 `SetWorkplace(false)`） | 默认 ✗ |
-
-### 专长（特质，组 "Specialization"，`const.ColonistSpecialization` 的 key）
-```
-none / scientist / engineer / security / geologist / medic / botanist / Tourist
-```
-- 居民属性：`colonist.specialist`（string，"none"=无专长）
-- 每个专长特质 `OnApply` 自动 `colonist:SetSpecialization(trait.id)`
-- `GetSpecialization(spec)` 取显示名/desc；`ColonistClasses` 映射到实体类（Scientist/Engineer/…）
-- 外观由 `GetSpecialistEntity(specialist, gender, race, age_trait, traits)` 生成（专长/性别/族裔/年龄组四段拼实体名）→ **移除专长时外观会自动回到通用居民**（游戏侧 `ChooseEntity` 处理）
-
-### 常用操作
-```lua
-colonist.traits.SomeTrait      -- 是否有某特质（真/假）
-colonist:AddTrait("Workaholic")           -- 安全多次调用
-colonist:RemoveTrait("Lazy", true)        -- 第二参 true = ignore_missing
-colonist:Affect("StatusEffect_X", "start") -- 加/移除自定义状态（需 DefineClass）
-colonist:SetModifier("performance", "modid", -20, 0, T{...})  -- 数值修正
-colonist:SetResidence(building)  colonist:SetWorkplace(building)
-UICity.labels.Colonist         -- 全体居民
-UICity.labels.Unemployed       -- 当前失业
-dome.labels.Colonist / dome.labels.Unemployed / dome.labels[GetTraitLabel("Lazy")]
-```
-
-### 自定义状态（StatusEffect 范例，来自 Colonists.md）
-```lua
-DefineClass.StatusEffect_XXX = {
-	__parents = { "StatusEffect" },
-	display_name = T{"XXX"},
-	description = T{"..."},
-}
-function StatusEffect_XXX:Start(unit, start) unit:SetModifier("performance","XXX",-10) end
-function StatusEffect_XXX:Stop(unit)        unit:SetModifier("performance","XXX",0,0) end
-```
-
----
-
-## 5. 线程与时间 API（`LuaExportedDocs\Global\thread.lua` + `LuaDoc__G.md.html`）
-
-```lua
-GameTime()                          -- 当前游戏时间(ms)
-CreateGameTimeThread(function()     -- 游戏时间线程（随暂停/倍速）
-	Sleep(3 * const.DayDuration)    -- Sleep 用游戏时间；const.DayDuration = const.Scale.sols
-end)
-CreateRealTimeThread(function() ... end)  -- 真实时间线程
-WaitThread(thread, timeout)         -- 等线程
-AsyncRand(n)                       -- 异步随机（MOD 里替代 math.random，别在热路径用确定性 rand）
-```
-`_GameConst.lua`：`const.DayDuration = const.Scale.sols`，`const.HourDuration = const.Scale.h`（默认 1 sol = 24h；游戏可改时间比例）。
-
----
-
-## 6. 选项条目速查（items.lua 序列化写法）
-
-```lua
-return {
-	PlaceObj('ModItemCode', { 'CodeFileName', "Code/Script.lua" }),
-	PlaceObj('ModItemOptionToggle', {
-		'name', "MyToggle", "DisplayName", "...", "Help", "...", "DefaultValue", true, }),
-	PlaceObj('ModItemOptionNumber', {
-		'name', "MyNum", "DisplayName", "...", "Help", "...",
-		'DefaultValue', 3, "MinValue", 1, "MaxValue", 30, }),
-	-- 可选：PlaceObj('ModItemOptionChoice', { 'name', "X", 'ChoiceList', {"a","b"}, 'DefaultValue', "a" })
-}
-```
-- `name` = 选项 id，代码里 `CurrentModOptions.GetProperty("MyNum")` 读值。
-- 选项没有 `name`（或为空）会被判无效、不显示。
-- 数字选项 UI 是滑杆（`GetOptionMeta` 里 `slider=true`），`StepSize` 缺省 1。
-
----
-
-## 7. 本 MOD 回顾（就业再分配）
-
-- 逻辑：`OnMsg.NewDay` → 遍历 `UICity.labels.Unemployed` → 合格者（非 Child/Senior、有真实专长）连续计数 → 达到 `Unemployment_Redist_Sols`（默认 3）→ `RemoveTrait(specialist, true)` + `AddTrait("none")` 退回无专长 → 清计数；重新就业/死亡/读档/新局均清零。
-- 计数器 `unemp_days` 为弱键表（内存级）。**已知未做**：不跨存档持久化；Tourist 目前按"有专长"处理。
-- 测试方式与已通过的用例见 `AGENTS.md`。
-
----
-
-## 8. 开发新功能时优先去查的清单（按需取用）
-
-| 需求 | 去哪查 |
+| 项 | 值 |
 | --- | --- |
-| 新 OnMsg 事件 | `Docs\LuaDoc_Msg.md.html` |
-| 居民/特质/状态 | `Docs\Colonists.md.html` + `Docs\ModItemTrait.md.html` + `Src\Data\TraitPreset.lua` |
-| 标签（找对象集合） | `Docs\LuaMarsMapsLabels.md.html`（city/dome/colony labels，含 Unemployed/Homeless…） |
-| 建筑类改动 | `Docs\ModItemBuildingTemplate.md.html` + `Src\Data\BuildingTemplate\*.lua` |
-| 科技 | `Docs\Research.md.html` + `Docs\ModItemTechnology.md.html` + `LuaDoc_Gameplay.md.html`（GrantTech…） |
-| 作物 | `Docs\ModItemCrop.md.html`；植被 `ModItemVegetation.md.html` |
-| 灾害 | 参考 "WW Constant Meteor Storms" MOD 的 Preset 查找法（`Presets.MapSettings.Meteor` / `DataInstances.MapSettings_Meteor`） |
-| 全局函数（压缩/持久/定位） | `Docs\LuaDoc__G.md.html` |
-| 数值修正（label modifier） | `Docs\LuaDoc_Gameplay.md.html` 的 CreateLabelModifier 章 + `LuaMarsMapsLabels.md.html` 的 Label Modifiers 章 |
-| UI/弹窗 | `Docs\ModItemLocTable.md.html`（本地化）、`WaitCustomPopupNotification`（`LuaDoc__G.md.html`） |
-| 玩法函数（锁建筑/改价格/送研究） | `Docs\LuaDoc_Gameplay.md.html` |
+| MOD 目录 | `%AppData%\Surviving Mars Relaunched\Mods\Employment - Redistribution` |
+| MOD id | `dyLFuib` |
+| 创意工坊 item | `3800017811` |
+| 选项 | `Enable_Unemployment_Redist`（toggle，默认 true）；`Unemployment_Redist_Sols`（number 1-30，默认 3） |
+| 运行时逻辑 | 仅 `Code/Script.lua`（`ModItemCode` 载入），事件：`OnMsg.NewDay`（计数/触发）+ `OnMsg.ModsReloaded`/`OnMsg.ApplyModOptions`（读选项）+ `OnMsg.NewGame`/`OnMsg.PostLoadGame`/`OnMsg.ModUnloadLua`（清计数器） |
+| 计数表 | `unemp_days`（弱键表，内存级，不跨存档） |
+
+### 关键行为结论（已在源码/文档中核实）
+
+1. **"无专长"的实现**：专长 = 特质组 `Specialization`；`colonist.specialist` 存专长 id；`"none"` 是特质 `No specialization`（`Data/TraitPreset.lua:612` 起，`group = "Specialization"`，`display_name = "No specialization"`，`auto = false`）。给居民 `AddTrait("none")` 时其 `OnApply` 会调用 `colonist:SetSpecialization("none")`，所以退专长 = `c:RemoveTrait(c.specialist, true)` + `c:AddTrait("none")`。
+2. **有效专长全集**：`const.ColonistSpecialization`（`Src/Lua/Specialization.lua:4`），key 为 `none / scientist / engineer / security / geologist / medic / botanist / Tourist`。判断"真专长"：`c.specialist` 在 `const.ColonistSpecialization` 中且 ~= "none"。（Tourist 也可作专长出现，但 `ColonistSpecializationList` 里被移除，属于游客场景。）
+3. **`SetSpecialization(spec)` 语义**（`Src/Lua/Units/Colonist.lua:3071`）：若 spec 已在 traits 中，只更新 `self.specialist` 并换模型；否则会先 `AddTrait(spec)`，切专长时 `RemoveTrait(旧)`。切换后发 `Msg("NewSpecialist", self)`。
+4. **工作匹配**：建筑 `workplace.specialist` 与 `colonist.specialist` 匹配才给 `preferred_workplace_performance_bonus`，不匹配吃 `g_Consts.NonSpecialistPerformancePenalty` 惩罚（`Colonist.lua:1644` `ChangeWorkplacePerformance`）。所以把居民退成 none 后，他只能进"任意专长"岗位或接受降效率。
+5. **失业判定入口**：`UICity.labels.Unemployed`（城市级）与 `dome.labels.Unemployed`（穹顶级）。`labels` 里某 label 可能不存在，必须 `or empty_table` / `or {}` 保护；取长度要写 `#(x or "")`。
+6. **居民对象随时可能销毁**（死亡/回地球/克隆替换），对居民的任何调用包 `pcall`；迭代中先判断 `IsValid(c)`。
+7. **年龄特质 id**：`Child` / `Youth` / `Adult` / `Middle Aged`（注意带空格）/ `Senior`，直接 `colonist.traits.<id>` 判断。
+8. **事件时机**：`OnMsg.NewDay(day)` 每太阳日一次，`day` 即 `UIColony.day`。`NewGame` 新开局；`PostLoadGame` 读档完成（可做 fixup）；`LoadGame` 是读档中途。`ModUnloadLua(mod_id)` 在卸载 MOD 前。
 
 ---
 
-## 9. 已知坑（踩过/注意）
+## 2. OnMsg 事件全表（摘要自 `Docs/LuaDoc_Msg.md.html`）
 
-1. **没启用 MOD 就不会出现选项**：Options → "Mod Options" 页逐 MOD 检查 `items 已加载 && 有 options`，未勾选启用就整页没有。
-2. **items.lua 被外部改过，编辑器保存会弹 "modified externally…overwrite?"** —— 选 Yes 覆盖即可（日志里出现 `CanSaveMod` 的 WaitQuestion）。
-3. **PowerShell 跑多命令不要用 `&&`**（本机 PS 版本不支持），用 `;` 分隔。
-4. **logger 里 `Mars.exe` 与 `MarsDebug.exe` 分日志文件**；`-GED-ModEditor-*` 后缀的是编辑器进程。
-5. **`math.random` 慎用**：MOD 沙箱里随机数走 `AsyncRand`（见气象 MOD 范例），确定性 rand 会影响存档一致性。
-6. **metadata.lua 的 `version`/`code_hash`/`steam_id` 是编辑器写的**，手改会失去上传时的 diff 提示，改完必回编辑器存一次。
-7. **文档 HTML 里的 T{...}/T(...) 是本地化包装**，MOD 里写用户可见文本也用 `T{...}` 保证可翻译。
+- 每日/每小时：`OnMsg.NewDay(day)`、`OnMsg.NewHour(hour)`
+- 居民：`ColonistBorn(colonist, event)`、`ColonistArrived(colonist)`、`ColonistLeavingMars(colonist, rocket)`、`ColonistDied(colonist, reason)`、`ColonistChangeWorkplace(colonist, new, old)`、`NewSpecialist(colonist)`
+- 特质：`ColonistAddTrait(colonist, trait_id)` / `ColonistRemoveTrait(colonist, trait_id)`
+- 状态：`ColonistStatusEffect(colonist, status_effect, bApply, now)`（如 `StatusEffect_Unemployed`、`StatusEffect_Homeless`、`StatusEffect_Earthsick`）
+- MOD：`ModsReloaded()`、`ApplyModOptions(mod_id)`、`ModUnloadLua(mod_id)`、`NewGame()`、`PreLoadGame(metadata)`、`LoadGame(metadata, version)`、`PostLoadGame(metadata, version)`、`SaveGameStart()`、`ChangeMap()`
+- 建筑/班次：`ConstructionComplete(building)`、`OnSetWorking(building, working)`、`NewWorkshift(workshift)`
+- 火箭：`RocketLanded(rocket)`、`RocketLaunchFromEarth`、`RocketLaunched(rocket)`、`RocketLaunchedAnywhere`、`RocketReachedEarth`、`RocketStatusUpdate(rocket, status)`（status 字符串：`"on earth"` / `"arriving"` / `"in orbit"` / `"landing"` / `"landed"` / `"refueling"` / `"countdown"` / `"takeoff"` 等）
+- 科技：`TechResearched(tech_id, city)`
+- 灾害：`DomeHitByMeteor(dome, meteor)`
+- 政治/任务：`AnomalyRevealed`/`AnomalyAnalyzed(anomaly)`、`PlanetaryAnomalySpawned`、`SpecialProjectSpawned`、`ColonyApprovalPassed`
+- 选中标记：`SelectedObjChange(object, previous)`
+
+### 自定义消息
+
+`Msg("MyEvent", ...)` 发送；任何 MOD/游戏代码都可收发，消息名可能撞车，建议前缀 `MyMod_MyEvent`。
+
+---
+
+## 3. 居民（Colonist）API
+
+（来自 `Docs/Colonists.md.html` + `Src/Lua/Units/Colonist.lua`）
+
+- 四统计值 `0..100`：`colonist.stat_health / stat_sanity / stat_comfort / stat_morale`
+- 增减：`colonist:ChangeHealth/ChangeSanity/ChangeComfort/ChangeMorale(±amount)`；文档示例统计值乘 `const.Scale.Stat` 缩放（该值通常 = 1）
+- 修饰器：`colonist:SetModifier(prop, id, amount, percent, display_text)`；清零 `colonist:SetModifier(prop, id, 0, 0)`。`prop` 常用 `performance`、`base_morale`、`death_age`
+- 特质：`colonist.traits.<id>`（bool）、`colonist:AddTrait(id)`（重复调用幂等）、`colonist:RemoveTrait(id, ignore_missing)`（无该特质且不 ignore 会 assert！）
+- 专长：`colonist.specialist`（string，见 §1.2）
+- 住所/工作：`colonist.residence`、`colonist.workplace`、`colonist:CanWork()`、`colonist:GetFired()`（主动辞职，释放岗位）
+- 穹顶：`colonist.dome`（可 nil，如在外/太空）；`colonist.dome.labels.X` 访问本穹顶 label
+- 状态效果表：`colonist.status_effects.<StatusEffect_*>`（存在即生效）
+- 其他：`IsValid(colonist)`、`colonist:IsDying()`、`colonist:Random(100)`（带盐可复现随机）、`colonist.name`
+- 穹顶内按特质查人：`dome.labels[GetTraitLabel("Lazy")]`；特质 label 名格式 `Trait<CapitalizedTrait>`（如 `TraitCoward`）
+
+### 居民生成（`Colonist.lua:4488` 附近）
+
+新 applicant 的 `specialist` 按 `g_Consts[spec.."_arrival_chance"]` 权重随机；`g_Consts.unskilled_arrival_chance` 决定无专长概率；`race` 1-5 对应 `ColonistRace = {"Ca","Af","As","Ar","Hs"}`。
+
+---
+
+## 4. 特质（Trait）机制
+
+（`Docs/ModItemTrait.md.html`）
+
+- 特质预设数据在 `Src/Data/TraitPreset.lua`（`PlaceObj('TraitPreset', ...)` 列表）
+- 特质组（`group`）：`Age Group`、`Specialization`、`Gender`、`Perks`("Positive")、`Flaws`("Negative")、`Quirks`("other")
+- 生命周期钩子：`OnApply(trait, colonist, init)` / `OnUnApply` / `DailyUpdate(trait, colonist)` / `OnEat` / `OnEatIngredients`
+- 属性修饰：`modify_target`("self"/"dome colonists") + `modify_property` + `modify_amount`/`modify_percent` + `infopanel_effect_text`
+- 工具函数：
+  - `GetCompatibleTraits(compatible, nonerare, rare, category)` → 两表（非罕见/罕见）
+  - `GetRandomTrait(compatible, nonerare, rare, category, base_only, ...)`
+  - `TraitFilterColonist(trait_filter, colonist_traits)`（正数匹配 / 负数不匹配）
+  - `LockTrait(name, reason)` / `UnlockTrait(name, reason)` / `IsTraitAvailable(name)`
+- 兴趣服务列表：`ServiceInterestsList = {interestSocial, interestRelaxation, interestExercise, interestGaming, interestShopping, interestLuxury, interestDrinking, interestGambling, interestPlaying, interestDining, interestSafari, needFood, needMedical}`
+- 定义新特质 ModItem：编辑器里加 `ModItemTrait`
+
+### 本 MOD 相关
+
+专长特质（scientist 等）注册在 `const.ColonistSpecialization`（§1.2）；`none` 特质的 `OnApply` 调 `SetSpecialization("none")`（源码 `Data/TraitPreset.lua:628`）。
+
+---
+
+## 5. 选项（ModItemOption）机制
+
+（`Docs/ModItemOption.md.html` + `Docs/ModItemCode.md.html`）
+
+- 类型：`ModItemOptionToggle`（on/off）、`ModItemOptionNumber`（滑块，Min/Max）、choice（字符串列表）
+- `name` 是 Lua 读取键，**三处必须一致**：`items.lua` 的 `name`、`Code/Script.lua` 的键、`metadata.lua` 的 `default_options` 键（见 AGENTS.md 规则 1）
+- 游戏内读取：`CurrentModOptions:GetProperty("OptionName")`；兜底默认值放脚本本地表
+- 变更事件：`OnMsg.ApplyModOptions(mod_id)`（玩家点 Apply）+ `OnMsg.ModsReloaded()`（加载/热重载）
+- 选项存于自动生成的 `options.lua` 类里，改选项结构注意向后兼容；无 `name` 的选项无效
+- `CurrentModId` / `CurrentModPath` 全局可用；不鼓励用 `CurrentModOptions` 回写选项值
+
+---
+
+## 6. Labels（标签系统）
+
+（`Docs/LuaMarsMapsLabels.md.html`）
+
+- 城市：`UICity.labels.<Label>`；穹顶：`dome.labels.<Label>`；全殖民地：`UIColony.city_labels.labels.<Label>`
+- 手动挂标签：`UICity:AddToLabel("MyLabel", obj)`（隐式同步到 colony label）；`LabelContainer:InitEmptyLabel(name)` 预建空表
+- 常用城市 label：`Colonist`、`Unemployed`、`Homeless`、`DeadColonist`、`Building`、`BuildingNoDomes`、`Workplace`、`ResearchLab`、`TrainingBuilding`、`ResourceProducer/Exploiter`、`Drone`、`Rover`、`Suspended`（尘暴停工）、`OutsideBuildings`/`InsideBuildings`……；每栋建筑还会出现在其类名/模板名/建菜单类别名的 label 里；建造中对象额外带 `<Label>_Construction` 后缀 label
+- 穹顶级 label：`Colonist`、`Unemployed`、`Homeless`、`Building`、`Residence`、`Spire`、`Service`；`interest<Service>` 形式（如 `interestPlaying`）
+- Label 修饰器（批量改某 label 下所有对象属性）：
+  ```lua
+  local m = LabelModifier:new{container = dome, label = "Building", id = "MyMod",
+                              prop = "performance", amount = 10, percent = 10,
+                              display_text = T{...}}
+  dome:SetLabelModifier("Building", m.id, m)   -- 加
+  dome:SetLabelModifier("Building", m.id)       -- 删（只传 id）
+  ```
+- 公式：`final = original * (100 + total_percent)/100 + total_amount`（percent 10 = 10%）
+- 城市级便捷封装：`CreateLabelModifier(id, label, prop, amount, percent)` / `ChangeLabelModifier` / `RemoveLabelModifier`（见 §11）
+
+### 地图/City 全局变量
+
+`MainMap`（地表，恒存在）、`UndergroundMap`、`CurrentMap`、`UICity`（当前地图城市）、`Cities`/`LoadedMaps`（数组）、`UIColony`（`UIColony.day`/`.hour`/`.funds`/`.asteroids`…）。小行星地图：`UIColony.asteroids[i]` 是 descriptor，未生成前只有 descriptor，生成后 `.map` 可访问。
+
+---
+
+## 7. 时间 / const 关键常量
+
+（`Src/Lua/_GameConst.lua` + `CommonLua/Core/const.lua`）
+
+- `const.DayDuration` = `const.Scale.sols`（1 个太阳日的游戏时间单位）；`const.HoursPerDay` = `Scale.sols / Scale.h`（默认 24 小时/日）；`const.HourDuration` = `Scale.h`
+- `const.Scale` 基础度量在 `CommonLua/Core/const.lua:60`（`km/m/cm/deg/sec/min` 等）；`Scale.sols`/`Scale.h` 的默认值由 C 侧或游戏选项（时间速度）决定，Lua 里没有再赋值。`Sleep(3 * const.DayDuration)` = 3 个太阳日（游戏内线程）。
+- 其它常用：`const.ResearchPointsScale` = 1000、`const.ReconPointsScale` = 1000、`const.SoilQualityScale` = 100、`const.Scale.Stat`（统计值缩放，通常 =1）、`const.DefaultAutosaveIntervalScale`（=1 个太阳日）
+- 真实时钟线程：`CreateRealTimeThread(fn)`；游戏时钟线程：`CreateGameTimeThread(fn)`；`GameTime()` 返回当前游戏时间
+- 本地化字符串：`T(id, "text")` 或 `T{id, "templ <x>", x = ...}`；`Untranslated("...")` 直出
+
+---
+
+## 8. 线程与消息（Threads / Messages）
+
+- 协作线程基于协程：`CreateGameTimeThread(function() Sleep(ms) ... end)`；`Sleep` 单位同 `GameTime()`（游戏毫秒，受游戏速度影响）
+- `WaitThread(thread, timeout)` → `in_time, finished, ...`
+- 命名流程挂起/恢复：`SuspendProcessing(map, process, reason, ignore_errors)` / `ResumeProcessing(map, process, reason, ignore_errors)` / `IsProcessingSuspended`
+- 类生命周期消息（改 classdef 用）：`OnMsg.ClassesPreprocess/Generate/PreBuilt/PostBuilt/Postprocess`
+
+---
+
+## 9. 持久化数据（跨存档/跨会话）
+
+（`Docs/ModItemCode.md.html`）
+
+- **MapVar**：随地图初始化、随存档保存、切图清空重建。适合"本存档内的数据"。注意：在 MOD 编辑器里热加载不会初始化 table 型 MapVar（没有地图切换），需重启编辑器地图
+- **`WriteModPersistentData(mod, data)` / `ReadModPersistentData(mod)`**：跨游戏会话的每-MOD 持久存储，`data` 必须是 string（≤ `const.MaxModDataSize`），通常配 `Compress/Decompress` 或 `AsyncCompress` 存序列化数据；`WriteModPersistentStorageTable(mod)` 是便捷封装
+- 序列化任意值：`TupleToLuaCode(values...)` → 可执行代码串；`LuaCodeToTuple(code, env)` 反向；`ValueToLuaCode(value, indent)`
+
+---
+
+## 10. 常用全局函数速查（`Docs/LuaDoc__G.md.html`）
+
+- 压缩/解压：`Compress/Decompress`（LZ4）、`AsyncCompress/AsyncDecompress`（ZSTD，默认算法）、`AsyncSerializeAndCompress`/`AsyncDecompressAndUnserialize`
+- 随机：`Random(a, b, salt)`、`InteractionRand(n, seed)`、`AsyncRand()`
+- 对象：`IsValid(obj)`、`IsValidPos`/`IsValidZ`、`FindNearestObject(list, pt, filter)`、`GetDomeAtHex/GetDomeAtPoint`、`IsObjInDome`、`IsUnitInDome`
+- 地形/网格：`GetVoxelHeight`、`IsTerrainFlat`、`GetPassablePointNearby`；hex 轴向坐标 `q, r`
+- 特效/声音：`PlayFX(action, moment, actor, target, pos, dir)`、`PlaySound(name, ...)`、`RGB/RGBA(r,g,b[,a])`
+- 定位 UI：`ResolveUILocation(preset, params, dlg)`
+- 弹框等待：`WaitCustomPopupNotification(title, text, choices, parent)`（必须在 GameTime 线程内调用）
+- 集合工具：`array_set()`（有序集合）、`sync_set()`（同步集合）、`ripairs(arr)`（可安全删元素的反向迭代）、`table.find(t, key, value)`、`table.keys2(t, ...)`、`table.weighted_rand(weights, ...)`、`table.map(t, fn)`
+- 哈希：`xxhash(...)`
+- 检查 DLC：`IsDlcAvailable("dlc_id")`（DLC 是安装目录 `DLC/` 下的 `.hpk`，文件名 = id）
+- 检查其他 MOD 是否加载：`ModsLoaded` 表 + `table.find(ModsLoaded, "id", mod_id)`
+
+## 11. 游戏性函数（`Docs/LuaDoc_Gameplay.md.html`）
+
+- 资金：`ChangeFunding(±value_M, "source")`（单位百万）；`UIColony.funds:ChangeFunding(...)`
+- 科研：`GrantResearchPoints(n)`、`GrantReconPoints(n)`、`GrantTech(tech_id)`、`IsTechResearched`（返回次数或 nil）/`IsTechUnlocked`/`IsTechRepeatable`、`BoostTech(tech, percent)`/`BoostTechField(field, percent)`（field 传 `""` = 全部）
+- 建造：`LockBuilding(class, "hide"/"disable", reason)` / `UnlockBuilding(class)` / `RemoveBuildingLock(class)`；`ModifyConstructionCost(building_or_category, resource, percent)`（资源用 `GroupResourceIds.ConstructionResources = {Concrete, Metals, Polymers, BlackCube, Electronics, MachineParts, PreciousMetals}` 或 `"all"`）
+- 补给：`ModifyResupplyParam(id, "price"/"weight", percent)`、`ModifyResupplyParams(param, percent)`、`LockImport/UnlockImport(item, lock_id)`、`LockCrop/UnlockCrop`、`LockVegetationPlant/UnlockVegetationPlant`、`IsCropAvailable`
+- 特质锁：`LockTrait/UnlockTrait/IsTraitAvailable`
+- 升级：`UnlockUpgrade(upgrade_id)`
+- Label 修饰器便捷封装：`CreateLabelModifier(id, label, prop, amount, percent)` / `ChangeLabelModifier(id, label, prop, new_amount, new_percent)` / `RemoveLabelModifier(id, label, prop)`（id 全局唯一，跨 MOD 也要不撞）
+
+---
+
+## 12. 类系统 / MOD 条目
+
+- `DefineClass.MyMod_Thing = { __parents = {...}, properties = {...} }`；**类名与消息名加前缀防撞名**（文档明确建议）
+- 消息反应两种写法：`OnMsg.<Event>` 直接赋值函数（本项目用法）；非 ModItem 形式也可
+- `ModItemCode`：载入单个 `.lua` 文件（本项目即 `Code/Script.lua`）；`CurrentModPath` 指向 MOD 根
+- ModItem 清单（`Docs/index.md.html`）：Code / Option / Trait / Entity / BuildingTemplate / GameRule / StoryBit / Technology / MissionSponsor / CommanderProfile / Crop / Animal / Vegetation / RadioStation / Sound / 各 ActionFX / TechField / LocTable / ColonyColorScheme / MissionLogo / Lightmodel / Attachment / BuildMenuSubcategory
+- 预设替换规则：同 Id 的 ModItem 预设**替换**游戏自带预设（如新增 Mission Sponsor 用 `ESA` 会覆盖原 ESA）
+- 预设继承：编辑器里 `Copy from group` / `Copy from` 可直接复制现有预设属性（会覆盖同名属性，注意备份）
+- StoryBit（随机事件）：`ModItemStoryBit`，Category = "Tick" 的会被周期性小概率随机执行；做随机事件前读 `Docs/ModItemStoryBit.md.html`
+- MOD 依赖：metadata 的 `Dependencies`（最小 major.minor，可标 optional），依赖方先加载
+
+---
+
+## 13. 本项目的坑与约定
+
+1. **弱键表**：`unemp_days = setmetatable({}, {__mode="k"})`——居民 C 对象销毁后条目自动消失；但"重新就业"不会自动清，所以 `NewDay` 里对不在 `Unemployed` label 的键做清理（`CleanupCounters`）。
+2. **清理顺序**：先加计数（可能触发退专长），再清掉不在场的键——顺序反了会误清刚触发者。
+3. **`empty_table`** 是游戏全局空表，label 缺省保护用。
+4. **触发失败重试**：`ResetSpecialization` 返回 false 时保留计数，下个太阳日再试。
+5. **`IsValid` 保护**：居民在 `NewDay` 迭代中可能已死，成员访问前先 `IsValid(c)`。
+6. **调试**：`Script.lua` 顶部 `DEBUG = true`，控制台前缀 `[EmploymentRedist]`；游戏内按 Enter 开调试控制台（MarsDebug.exe），可执行任意 Lua 查状态。
+7. **VS Code 调试**：装 `ModTools/SolEngineLua.vsix`，打开 `ModTools/Src/ModTools.code-workspace`，F5 附加；支持断点/Log Point/表达式求值（Alt-E）。语法检查装 sumneko.lua。
+8. **发布**：改 `items.lua`/`Script.lua` → 游戏 MOD 编辑器保存（自动升 version、刷 `code_hash`/`saved`/`steam_id`，别手改这些字段）→ 编辑器上传工坊。`last_changes` 保持一句话。
+9. **不要手改** `metadata.lua` 的 `lua_revision` / `saved_with_revision` / `code_hash` / `saved`。
+
+## 14. 新功能方向备忘（下一步可用）
+
+- **持久化计数**（跨读档不丢）：MapVar（随存档）或 `WriteModPersistentData`（跨会话，字符串序列化）
+- **退专长公告**：`WaitCustomPopupNotification`（GameTime 线程）或 OnScreenNotification 机制（`Src/Lua/UI/OnScreenNotification.lua`）
+- **按穹顶统计/批量效果**：`dome.labels.Unemployed` + LabelModifier / `SetLabelModifier`
+- **随机事件（StoryBit）**：`ModItemStoryBit` + Msg Reactions，参考 `ForeignerInAForeignLand` 示例 MOD
+- **新特质**：`ModItemTrait` 预设 + `OnApply/OnUnApply/DailyUpdate` 钩子；兴趣服务用 `interest*` 常量表（§4）
+- **科研/资源类效果**：§11 的 Grant*/Modify* 函数
+- **多 MOD 协作**：自定义消息名加前缀；`ModsLoaded` 检测依赖
+- **示例 MOD 学习**：`ModTools\Samples\Mods\` 下 BulgarianSpaceProgram（赞助/派系/开局载荷）、CactusCrop（作物交互）、Cemetery（建筑逻辑 + 居民交互 + ActionFX）、Idiocracy（游戏规则）、MedicalResearcher（指挥官档案）、ShadowedSolarPanels（地形遮蔽判定）、ForeignerInAForeignLand（StoryBit 全特性）

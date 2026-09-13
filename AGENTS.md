@@ -11,6 +11,18 @@ Surviving Mars: Relaunched（内部代号 Project Spark，Steam AppID 3215050）
 - Steam 创意工坊 item: `3800017811`
 - 本目录即 MOD 的完整内容目录（`%AppData%\Surviving Mars Relaunched\Mods\Employment - Redistribution`）
 
+## 游戏版本基线（开发/测试时的实际版本）
+
+| 项 | 值 | 来源 |
+| --- | --- | --- |
+| 游戏 Build version | `1.1.0.403908` | 运行日志 `logs\MarsDebug*.log`（"Build version" 行） |
+| 游戏 Lua revision | `403908`（= `metadata.lua` 的 `saved_with_revision`） | 同上 |
+| 游戏 Assets revision | `33006` | 同上 |
+| MOD 开发时 lua_revision | `350453`（= `metadata.lua` 的 `lua_revision`，编辑器自动维护） | `metadata.lua` |
+| Steam AppID | `3215050` | 日志 / 创意工坊 |
+
+> 游戏更新后（`saved_with_revision` 变化）需重进 MOD 编辑器保存一次并复测；API 以新装目录下的 `ModTools\Docs\` 为准。
+
 ## 文件结构
 
 | 文件 | 说明 |
